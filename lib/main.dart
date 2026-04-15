@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:mohish/core/data/ad_placement_service.dart';
+import 'package:mohish/core/data/api_client.dart';
 
 import 'app/mohish_app.dart';
 import 'core/data/app_open_ad_service.dart';
@@ -9,14 +11,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await MobileAds.instance.initialize();
 
-  // Start the App Open ad lifecycle observer so the first ad is ready
-  // before the user ever leaves the app.
+  // App Open ad observer
   final appOpenAdService = AppOpenAdService();
   appOpenAdService.initialize();
 
-  // Warm-up the rewarded ad cache so "Watch & Earn" has zero wait time.
+  // Rewarded ad – resolve placement from backend so iOS devices get the
+  // highest-CPM unit ID automatically.
   final rewardedAdService = RewardedAdService();
-  rewardedAdService.preload();
+  final tempApiClient = ApiClient();
+  final placementService = AdPlacementService(apiClient: tempApiClient);
+  await rewardedAdService.preload(placementService);
 
   runApp(
     MohishApp(

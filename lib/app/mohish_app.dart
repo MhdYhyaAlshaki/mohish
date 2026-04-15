@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mohish/core/data/ad_placement_service.dart';
 import 'package:mohish/core/data/api_client.dart';
 import 'package:mohish/core/data/app_open_ad_service.dart';
 import 'package:mohish/core/data/auth_storage.dart';
@@ -31,6 +32,7 @@ class MohishApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final apiClient = ApiClient();
     final authStorage = AuthStorage();
+    final adPlacementService = AdPlacementService(apiClient: apiClient);
     final authRepository = AuthRepository(
       apiClient: apiClient,
       storage: authStorage,
@@ -39,11 +41,18 @@ class MohishApp extends StatelessWidget {
     final walletRepository = WalletRepository(apiClient: apiClient);
     final referralRepository = ReferralRepository(apiClient: apiClient);
     final adsRepository = AdsRepository(apiClient: apiClient);
+
+    // Interstitial: resolved ad unit ID from backend (platform-aware)
     final interstitialAdService = InterstitialAdService();
+    interstitialAdService.initialize(
+      placementService: adPlacementService,
+      placementKey: 'splash_interstitial',
+    );
 
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<ApiClient>.value(value: apiClient),
+        RepositoryProvider<AdPlacementService>.value(value: adPlacementService),
         RepositoryProvider<AuthRepository>.value(value: authRepository),
         RepositoryProvider<DashboardRepository>.value(
           value: dashboardRepository,
