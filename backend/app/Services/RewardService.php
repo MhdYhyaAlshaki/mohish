@@ -103,6 +103,7 @@ class RewardService
                     'awarded_points' => $session->reward_given,
                     'new_balance' => (int) $user->fresh()->points,
                     'daily_count' => $dailyCount,
+                    'cooldown_seconds' => $this->cooldownSeconds(),
                     'next_available_at' => $session->completed_at
                         ? $session->completed_at->copy()->addSeconds($this->cooldownSeconds())->toIso8601String()
                         : Carbon::now()->toIso8601String(),
@@ -146,6 +147,7 @@ class RewardService
                 'awarded_points' => $awardedPoints,
                 'new_balance' => (int) $lockedUser->fresh()->points,
                 'daily_count' => $dailyCount,
+                'cooldown_seconds' => $this->cooldownSeconds(),
                 'next_available_at' => $completedAt
                     ->copy()
                     ->addSeconds($this->cooldownSeconds())

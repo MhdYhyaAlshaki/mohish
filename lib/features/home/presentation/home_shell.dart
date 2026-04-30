@@ -49,7 +49,7 @@ class _HomeShellState extends State<HomeShell> {
             pages[_currentTab],
             Expanded(
               flex: 2,
-              key: Key('${_currentTab}-banner-area'),
+              key: Key('$_currentTab-banner-area'),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [

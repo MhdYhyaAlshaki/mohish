@@ -5,6 +5,7 @@ import 'package:mohish/core/data/api_client.dart';
 import 'package:mohish/core/data/app_open_ad_service.dart';
 import 'package:mohish/core/data/auth_storage.dart';
 import 'package:mohish/core/data/interstitial_ad_service.dart';
+import 'package:mohish/core/data/remote_config_service.dart';
 import 'package:mohish/core/data/rewarded_ad_service.dart';
 import 'package:mohish/features/ads/data/ads_repository.dart';
 import 'package:mohish/features/ads/presentation/ads_cubit.dart';
@@ -21,18 +22,33 @@ import 'package:mohish/features/wallet/presentation/wallet_cubit.dart';
 class MohishApp extends StatelessWidget {
   const MohishApp({
     super.key,
+    required this.apiClient,
+    required this.remoteConfig,
+    required this.placementService,
     required this.appOpenAdService,
     required this.rewardedAdService,
+    required this.interstitialAdService,
   });
+
+  /// Single shared [ApiClient]. Created in main() and passed down so all
+  /// repositories and ad services share the same base URL and auth token.
+  final ApiClient apiClient;
+
+  /// Loaded in main() before runApp() — safe to read synchronously everywhere.
+  final RemoteConfigService remoteConfig;
+
+  /// Shared placement engine client. Caches per-session to avoid redundant
+  /// API calls (TTL = 30 min by default).
+  final AdPlacementService placementService;
 
   final AppOpenAdService appOpenAdService;
   final RewardedAdService rewardedAdService;
+  final InterstitialAdService interstitialAdService;
 
   @override
   Widget build(BuildContext context) {
-    final apiClient = ApiClient();
+    // Repositories wired to the single shared ApiClient.
     final authStorage = AuthStorage();
-    final adPlacementService = AdPlacementService(apiClient: apiClient);
     final authRepository = AuthRepository(
       apiClient: apiClient,
       storage: authStorage,
@@ -42,29 +58,19 @@ class MohishApp extends StatelessWidget {
     final referralRepository = ReferralRepository(apiClient: apiClient);
     final adsRepository = AdsRepository(apiClient: apiClient);
 
-    // Interstitial: resolved ad unit ID from backend (platform-aware)
-    final interstitialAdService = InterstitialAdService();
-    interstitialAdService.initialize(
-      placementService: adPlacementService,
-      placementKey: 'splash_interstitial',
-    );
-
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<ApiClient>.value(value: apiClient),
-        RepositoryProvider<AdPlacementService>.value(value: adPlacementService),
+        RepositoryProvider<RemoteConfigService>.value(value: remoteConfig),
+        RepositoryProvider<AdPlacementService>.value(value: placementService),
         RepositoryProvider<AuthRepository>.value(value: authRepository),
-        RepositoryProvider<DashboardRepository>.value(
-          value: dashboardRepository,
-        ),
+        RepositoryProvider<DashboardRepository>.value(value: dashboardRepository),
         RepositoryProvider<WalletRepository>.value(value: walletRepository),
         RepositoryProvider<ReferralRepository>.value(value: referralRepository),
         RepositoryProvider<AdsRepository>.value(value: adsRepository),
         RepositoryProvider<AppOpenAdService>.value(value: appOpenAdService),
         RepositoryProvider<RewardedAdService>.value(value: rewardedAdService),
-        RepositoryProvider<InterstitialAdService>.value(
-          value: interstitialAdService,
-        ),
+        RepositoryProvider<InterstitialAdService>.value(value: interstitialAdService),
       ],
       child: MultiBlocProvider(
         providers: [

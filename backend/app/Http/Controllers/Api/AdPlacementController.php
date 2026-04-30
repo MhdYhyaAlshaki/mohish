@@ -61,7 +61,7 @@ class AdPlacementController extends Controller
         return response()->json($result);
     }
 
-    // ── POST /api/v1/ad/placement/click ────────────────────────────────────────
+    // ── POST /api/v1/ad/click ───────────────────────────────────────────────────
     public function recordClick(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -72,6 +72,43 @@ class AdPlacementController extends Controller
             ['ad_impression_id' => $validated['impression_id']],
             ['ip_address'       => $request->ip()],
         );
+
+        return response()->json(['ok' => true]);
+    }
+
+    // ── POST /api/v1/ad/impression ─────────────────────────────────────────────
+    // Called by the Flutter app when an ad actually renders on screen.
+    // This supplements the impression already logged by resolve() but gives
+    // us a confirmed render event (resolve() fires before the SDK loads the ad).
+    public function recordImpression(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'impression_id' => 'required|integer|exists:ad_impressions,id',
+            'placement'     => 'nullable|string|max:100',
+        ]);
+
+        // Mark confirmed render on the existing impression row
+        AdImpression::where('id', $validated['impression_id'])
+            ->whereNull('confirmed_at')
+            ->update(['confirmed_at' => now()]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    // ── POST /api/v1/ad/reward ─────────────────────────────────────────────────
+    // Called by the Flutter app when the user earns a reward from a rewarded ad.
+    // The actual point award is still handled by /ad/complete (RewardService);
+    // this is a lightweight tracking event for analytics.
+    public function recordReward(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'impression_id' => 'required|integer|exists:ad_impressions,id',
+            'placement'     => 'nullable|string|max:100',
+        ]);
+
+        AdImpression::where('id', $validated['impression_id'])
+            ->whereNull('rewarded_at')
+            ->update(['rewarded_at' => now()]);
 
         return response()->json(['ok' => true]);
     }

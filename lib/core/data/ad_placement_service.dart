@@ -78,6 +78,32 @@ class AdPlacementService {
     }
   }
 
+  /// Record a confirmed render event against the given impression ID.
+  /// Fire-and-forget — errors are swallowed silently.
+  Future<void> recordImpression(int impressionId, String placementKey) async {
+    try {
+      await _apiClient.post('/v1/ad/impression', {
+        'impression_id': impressionId,
+        'placement': placementKey,
+      });
+    } catch (_) {
+      // Fire-and-forget
+    }
+  }
+
+  /// Record that the user earned a reward from an ad.
+  /// Fire-and-forget — errors are swallowed silently.
+  Future<void> recordReward(int impressionId, String placementKey) async {
+    try {
+      await _apiClient.post('/v1/ad/reward', {
+        'impression_id': impressionId,
+        'placement': placementKey,
+      });
+    } catch (_) {
+      // Fire-and-forget
+    }
+  }
+
   /// Record a user click against the given impression ID.
   Future<void> recordClick(int impressionId) async {
     try {

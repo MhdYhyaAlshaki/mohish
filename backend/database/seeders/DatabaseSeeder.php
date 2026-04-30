@@ -49,6 +49,41 @@ class DatabaseSeeder extends Seeder
             );
         }
 
+        // ── Ads / remote-config settings ──────────────────────────────────────
+        $adsSettings = [
+            // Global kill-switch
+            'ads_enabled'                          => ['value' => '1',          'group' => 'ads', 'value_type' => 'bool'],
+
+            // Feature flags per surface
+            'feature_flag_rewarded_ads'            => ['value' => '1',          'group' => 'ads', 'value_type' => 'bool'],
+            'feature_flag_interstitial_ads'        => ['value' => '1',          'group' => 'ads', 'value_type' => 'bool'],
+            'feature_flag_app_open_ads'            => ['value' => '1',          'group' => 'ads', 'value_type' => 'bool'],
+
+            // SDK init (AdMob test app IDs – replace with real ones in production)
+            'admob_app_id_android'                 => ['value' => 'ca-app-pub-3940256099942544~3347511713', 'group' => 'ads', 'value_type' => 'string'],
+            'admob_app_id_ios'                     => ['value' => 'ca-app-pub-3940256099942544~1458002511', 'group' => 'ads', 'value_type' => 'string'],
+
+            // Fallback ad unit IDs – used when decision engine has no campaign
+            'fallback_home_rewarded_network'       => ['value' => 'admob',       'group' => 'ads', 'value_type' => 'string'],
+            'fallback_home_rewarded_android'       => ['value' => 'ca-app-pub-3940256099942544/5224354917', 'group' => 'ads', 'value_type' => 'string'],
+            'fallback_home_rewarded_ios'           => ['value' => 'ca-app-pub-3940256099942544/1712485313', 'group' => 'ads', 'value_type' => 'string'],
+
+            'fallback_splash_interstitial_network' => ['value' => 'admob',       'group' => 'ads', 'value_type' => 'string'],
+            'fallback_splash_interstitial_android' => ['value' => 'ca-app-pub-3940256099942544/1033173712', 'group' => 'ads', 'value_type' => 'string'],
+            'fallback_splash_interstitial_ios'     => ['value' => 'ca-app-pub-3940256099942544/4411468910', 'group' => 'ads', 'value_type' => 'string'],
+
+            'fallback_app_open_network'            => ['value' => 'admob',       'group' => 'ads', 'value_type' => 'string'],
+            'fallback_app_open_android'            => ['value' => 'ca-app-pub-3940256099942544/9257395921', 'group' => 'ads', 'value_type' => 'string'],
+            'fallback_app_open_ios'                => ['value' => 'ca-app-pub-3940256099942544/5575463023', 'group' => 'ads', 'value_type' => 'string'],
+        ];
+
+        foreach ($adsSettings as $key => $meta) {
+            SystemSetting::query()->updateOrCreate(
+                ['key' => $key],
+                ['group' => $meta['group'], 'value' => $meta['value'], 'value_type' => $meta['value_type']],
+            );
+        }
+
         $regularTier = PayoutTier::query()->where('name', 'regular')->first();
 
         User::query()->updateOrCreate(

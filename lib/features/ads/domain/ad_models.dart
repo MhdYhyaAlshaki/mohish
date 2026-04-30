@@ -27,12 +27,14 @@ class AdCompleteResult {
     required this.newBalance,
     required this.dailyCount,
     required this.nextAvailableAt,
+    required this.cooldownSeconds,
   });
 
   final int awardedPoints;
   final int newBalance;
   final int dailyCount;
   final DateTime nextAvailableAt;
+  final int cooldownSeconds;
 
   factory AdCompleteResult.fromJson(Map<String, dynamic> json) {
     return AdCompleteResult(
@@ -40,6 +42,7 @@ class AdCompleteResult {
       newBalance: (json['new_balance'] as num?)?.toInt() ?? 0,
       dailyCount: (json['daily_count'] as num?)?.toInt() ?? 0,
       nextAvailableAt: DateTime.parse(json['next_available_at'] as String),
+      cooldownSeconds: (json['cooldown_seconds'] as num?)?.toInt() ?? 30,
     );
   }
 }

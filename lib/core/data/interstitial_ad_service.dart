@@ -1,103 +1,106 @@
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:mohish/core/ads/ad_adapter_factory.dart';
+import 'package:mohish/core/ads/ad_network_adapter.dart';
 import 'package:mohish/core/data/ad_placement_service.dart';
-import 'package:mohish/core/models/ad_placement_response.dart';
+import 'package:mohish/core/data/remote_config_service.dart';
 
-/// Pre-loads a full-screen interstitial ad whose unit ID is resolved from the
-/// backend placement engine at runtime.
+/// InterstitialAdService
+/// ──────────────────────
+/// Pre-loads a full-screen interstitial ad whose unit ID and network are
+/// resolved from the backend at runtime.
 ///
 /// A client-side frequency cap (3 minutes) prevents over-showing.
-///
-/// Platform logic (handled by the backend, not here):
-///   iOS devices score campaigns by ios_cpm_estimate (typically higher than
-///   android_cpm_estimate), so iOS users automatically get higher-value ads.
+/// All serving decisions (network, unit ID, frequency) are backend-controlled.
 class InterstitialAdService {
-  static const String _fallbackAdUnitId = String.fromEnvironment(
-    'ADMOB_INTERSTITIAL_UNIT_ID',
-    defaultValue: 'ca-app-pub-3940256099942544/1033173712', // Android test ID
-  );
-
   static const _minIntervalBetweenShows = Duration(minutes: 3);
 
-  InterstitialAd? _ad;
+  AdNetworkAdapter? _adapter;
   DateTime? _lastShownAt;
-  String _resolvedAdUnitId = _fallbackAdUnitId;
+  String _resolvedNetwork = 'admob';
+  String _resolvedUnitId  = '';
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  /// Call once after [MobileAds.instance.initialize()].
-  /// Optionally pass [placementService] + [placementKey] to resolve the best
-  /// network/unit for the current platform.
+  /// Call once after RemoteConfigService.load().
   Future<void> initialize({
-    AdPlacementService? placementService,
+    required AdPlacementService placementService,
+    required RemoteConfigService remoteConfig,
     String placementKey = 'splash_interstitial',
   }) async {
-    if (placementService != null) {
-      await _resolvePlacement(placementService, placementKey);
+    // Gate: global kill-switch or feature flag
+    if (!remoteConfig.adsEnabled ||
+        !remoteConfig.isFeatureEnabled('interstitial_ads')) {
+      return;
     }
-    _loadAd();
+
+    await _resolveAndLoad(placementService, remoteConfig, placementKey);
   }
 
   /// Shows the interstitial if one is ready and the frequency cap allows.
   /// Automatically pre-loads the next ad after dismissal.
-  void showIfReady() {
+  Future<void> showIfReady({
+    AdPlacementService? placementService,
+    RemoteConfigService? remoteConfig,
+  }) async {
     if (!_canShow) return;
-
-    _ad!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _ad = null;
-        _loadAd();
-      },
-      onAdFailedToShowFullScreenContent: (ad, _) {
-        ad.dispose();
-        _ad = null;
-        _loadAd();
-      },
-    );
-
     _lastShownAt = DateTime.now();
-    _ad!.show();
-    _ad = null;
+    await _adapter!.show();
+    _adapter = null;
+
+    // Pre-load next ad if services are available
+    if (placementService != null && remoteConfig != null) {
+      _resolveAndLoad(
+        placementService,
+        remoteConfig,
+        'splash_interstitial',
+      ).ignore();
+    }
   }
 
   void dispose() {
-    _ad?.dispose();
+    _adapter?.dispose();
+    _adapter = null;
   }
 
   // ── Private ────────────────────────────────────────────────────────────────
 
   bool get _canShow {
-    if (_ad == null) return false;
+    if (_adapter == null || !_adapter!.isLoaded) return false;
     if (_lastShownAt == null) return true;
     return DateTime.now().difference(_lastShownAt!) >= _minIntervalBetweenShows;
   }
 
-  Future<void> _resolvePlacement(
-    AdPlacementService service,
+  Future<void> _resolveAndLoad(
+    AdPlacementService placementService,
+    RemoteConfigService remoteConfig,
     String placementKey,
   ) async {
+    // Step 1: decision engine
     try {
-      final AdPlacementResponse? response =
-          await service.getPlacement(placementKey);
-      if (response != null && !response.blocked && response.adUnitId != null) {
-        _resolvedAdUnitId = response.adUnitId!;
+      final placement = await placementService.getPlacement(placementKey);
+      if (placement != null && !placement.blocked && placement.adUnitId != null) {
+        _resolvedNetwork = placement.network;
+        _resolvedUnitId  = placement.adUnitId!;
       }
-    } catch (_) {
-      // Keep fallback
-    }
-  }
+    } catch (_) { /* fall through */ }
 
-  void _loadAd() {
-    InterstitialAd.load(
-      adUnitId: _resolvedAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) => _ad = ad,
-        onAdFailedToLoad: (_) {
-          _ad = null;
-          Future.delayed(const Duration(minutes: 2), _loadAd);
-        },
-      ),
-    );
+    // Step 2: remote config fallback
+    if (_resolvedUnitId.isEmpty) {
+      final fallbackId  = remoteConfig.fallbackUnitId(placementKey);
+      final fallbackNet = remoteConfig.fallbackNetwork(placementKey);
+      if (fallbackId != null && fallbackId.isNotEmpty) {
+        _resolvedUnitId  = fallbackId;
+        _resolvedNetwork = fallbackNet;
+      }
+    }
+
+    if (_resolvedUnitId.isEmpty) return;
+
+    _adapter?.dispose();
+    _adapter = AdAdapterFactory.forNetwork(_resolvedNetwork);
+    try {
+      await _adapter!.load(_resolvedUnitId, 'interstitial');
+    } catch (_) {
+      _adapter = null;
+    }
   }
 }

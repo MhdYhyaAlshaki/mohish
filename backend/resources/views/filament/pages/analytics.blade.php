@@ -12,6 +12,18 @@
             <p class="text-sm text-gray-500">DAU / WAU</p>
             <p class="text-2xl font-semibold">{{ $this->overview['dau'] ?? 0 }} / {{ $this->overview['wau'] ?? 0 }}</p>
         </div>
+        <div class="rounded-xl bg-white p-4 shadow">
+            <p class="text-sm text-gray-500">Avg Gross Per Ad</p>
+            <p class="text-2xl font-semibold">{{ number_format($this->overview['avg_gross_per_ad'] ?? 0, 6) }}</p>
+        </div>
+        <div class="rounded-xl bg-white p-4 shadow">
+            <p class="text-sm text-gray-500">Avg Net Per Ad</p>
+            <p class="text-2xl font-semibold">{{ number_format($this->overview['avg_net_per_ad'] ?? 0, 6) }}</p>
+        </div>
+        <div class="rounded-xl bg-white p-4 shadow">
+            <p class="text-sm text-gray-500">Total User Time</p>
+            <p class="text-2xl font-semibold">{{ number_format(($this->overview['time_spent_seconds'] ?? 0) / 60, 1) }} min</p>
+        </div>
     </div>
 
     <div class="mt-6 rounded-xl bg-white p-4 shadow">
@@ -30,8 +42,12 @@
                 <thead>
                     <tr class="text-left border-b">
                         <th class="py-2">User</th>
+                        <th class="py-2">Your Revenue</th>
+                        <th class="py-2">User Gets</th>
                         <th class="py-2">Net Profit</th>
+                        <th class="py-2">Ads Seen</th>
                         <th class="py-2">Completed Ads</th>
+                        <th class="py-2">Time Spent</th>
                         <th class="py-2">Completion Rate</th>
                         <th class="py-2">Risk Avg</th>
                         <th class="py-2">Score</th>
@@ -41,8 +57,12 @@
                     @foreach($this->topUsers as $item)
                         <tr class="border-b">
                             <td class="py-2">{{ $item['name'] }} <span class="text-gray-400">({{ $item['email'] }})</span></td>
+                            <td class="py-2">{{ number_format($item['gross_revenue'], 4) }}</td>
+                            <td class="py-2">{{ number_format($item['user_payout_cost'], 4) }}</td>
                             <td class="py-2">{{ number_format($item['net_profit'], 4) }}</td>
+                            <td class="py-2">{{ $item['started_ads'] }}</td>
                             <td class="py-2">{{ $item['completed_ads'] }}</td>
+                            <td class="py-2">{{ number_format($item['time_spent_seconds'] / 60, 1) }} min</td>
                             <td class="py-2">{{ number_format($item['completion_rate'] * 100, 2) }}%</td>
                             <td class="py-2">{{ $item['risk_score_avg'] }}</td>
                             <td class="py-2">{{ $item['score'] }}</td>

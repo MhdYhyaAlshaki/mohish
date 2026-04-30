@@ -15,6 +15,15 @@ class SettingsService
         return $setting?->value ?? $default;
     }
 
+    public function getBool(string $key, bool $default = false): bool
+    {
+        $value = $this->getString($key);
+        if ($value === null) {
+            return $default;
+        }
+        return in_array(strtolower($value), ['1', 'true', 'yes', 'on'], true);
+    }
+
     public function getFloat(string $key, float $default = 0): float
     {
         $value = $this->getString($key);
@@ -53,10 +62,10 @@ class SettingsService
     private function inferType(mixed $value): string
     {
         return match (true) {
-            is_int($value) => 'int',
+            is_bool($value)  => 'bool',
+            is_int($value)   => 'int',
             is_float($value) => 'float',
-            is_bool($value) => 'bool',
-            default => 'string',
+            default          => 'string',
         };
     }
 }

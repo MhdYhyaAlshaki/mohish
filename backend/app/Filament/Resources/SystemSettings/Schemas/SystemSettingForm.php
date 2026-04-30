@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\SystemSettings\Schemas;
 
+use App\Services\SystemSettingRules;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -12,9 +13,16 @@ class SystemSettingForm
     {
         return $schema
             ->components([
-                TextInput::make('key')->required()->maxLength(80),
-                TextInput::make('group')->default('profit')->required()->maxLength(40),
-                TextInput::make('value')->required(),
+                Select::make('key')
+                    ->options(collect(SystemSettingRules::catalog())->mapWithKeys(
+                        fn (array $row, string $key): array => [$key => "{$row['label']} ({$key})"]
+                    )->all())
+                    ->searchable()
+                    ->required(),
+                TextInput::make('group')->disabled()->dehydrated()->default('profit'),
+                TextInput::make('value')
+                    ->required()
+                    ->helperText('Validation is enforced by key (min/max/type).'),
                 Select::make('value_type')
                     ->options([
                         'string' => 'string',
@@ -22,7 +30,8 @@ class SystemSettingForm
                         'float' => 'float',
                         'bool' => 'bool',
                     ])
-                    ->required(),
+                    ->disabled()
+                    ->dehydrated(),
             ]);
     }
 }

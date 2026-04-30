@@ -27,6 +27,9 @@ class AnalyticsService
 
         $pendingWithdrawals = (int) Withdrawal::query()->where('status', 'pending')->count();
         $avgRisk = (float) $rows->avg('risk_score_avg');
+        $timeSpentSeconds = (int) $rows->sum('time_spent_seconds');
+        $avgGrossPerAd = $completedAds > 0 ? round($grossRevenue / $completedAds, 6) : 0.0;
+        $avgNetPerAd = $completedAds > 0 ? round($netProfit / $completedAds, 6) : 0.0;
 
         $dau = (int) DailyUserMetric::query()
             ->where('metric_date', $end->toDateString())
@@ -51,6 +54,9 @@ class AnalyticsService
             'completion_rate' => $completionRate,
             'pending_withdrawals' => $pendingWithdrawals,
             'risk_score_avg' => round($avgRisk, 2),
+            'time_spent_seconds' => $timeSpentSeconds,
+            'avg_gross_per_ad' => $avgGrossPerAd,
+            'avg_net_per_ad' => $avgNetPerAd,
         ];
     }
 
@@ -61,7 +67,11 @@ class AnalyticsService
             ->selectRaw('
                 user_id,
                 SUM(net_profit) as net_profit,
+                SUM(gross_revenue) as gross_revenue,
+                SUM(user_payout_cost) as user_payout_cost,
                 SUM(completed_ads) as completed_ads,
+                SUM(started_ads) as started_ads,
+                SUM(time_spent_seconds) as time_spent_seconds,
                 AVG(completion_rate) as completion_rate,
                 AVG(risk_score_avg) as risk_score_avg
             ')

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\SystemSettings\Pages;
 
 use App\Filament\Resources\SystemSettings\SystemSettingResource;
 use App\Models\AdminAuditLog;
+use App\Services\SystemSettingRules;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateSystemSetting extends CreateRecord
@@ -12,6 +13,10 @@ class CreateSystemSetting extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        $validated = SystemSettingRules::validateValue($data['key'], $data['value']);
+        $data['value'] = $validated['value'];
+        $data['value_type'] = $validated['value_type'];
+        $data['group'] = $validated['group'];
         $data['updated_by'] = auth()->id();
         return $data;
     }

@@ -111,9 +111,7 @@ class AdsCubit extends Cubit<AdsState> {
       }
 
       final complete = await _repository.completeAd(start.sessionId);
-      final cooldown = complete.nextAvailableAt
-          .difference(DateTime.now())
-          .inSeconds;
+      final cooldown = complete.cooldownSeconds;
 
       emit(
         state.copyWith(

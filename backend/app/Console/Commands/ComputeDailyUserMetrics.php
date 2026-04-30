@@ -70,6 +70,12 @@ class ComputeDailyUserMetrics extends Command
 
             $completionRate = $startedAds > 0 ? round($completedAds / $startedAds, 4) : 0.0;
             $tierName = $user->payoutTier?->name ?? 'regular';
+            $timeSpentSeconds = (int) round(AdsLog::query()
+                ->where('user_id', $user->id)
+                ->where('completed', true)
+                ->whereDate('completed_at', $date->toDateString())
+                ->selectRaw('SUM(strftime("%s", completed_at) - strftime("%s", started_at)) as total_seconds')
+                ->value('total_seconds') ?? 0);
 
             $profit = $this->profitCalculator->metricsForUser(
                 $user,
@@ -77,6 +83,8 @@ class ComputeDailyUserMetrics extends Command
                 $rewardedPoints,
                 $referralCostPoints,
             );
+            $avgGrossPerAd = $completedAds > 0 ? round($profit['gross_revenue'] / $completedAds, 6) : 0.0;
+            $avgNetPerAd = $completedAds > 0 ? round($profit['net_profit'] / $completedAds, 6) : 0.0;
 
             DailyUserMetric::query()->updateOrCreate(
                 [
@@ -87,12 +95,15 @@ class ComputeDailyUserMetrics extends Command
                     'tier_name' => $tierName,
                     'started_ads' => $startedAds,
                     'completed_ads' => $completedAds,
+                    'time_spent_seconds' => max(0, $timeSpentSeconds),
                     'rewarded_points' => $rewardedPoints,
                     'referral_cost_points' => $referralCostPoints,
                     'gross_revenue' => $profit['gross_revenue'],
+                    'avg_gross_per_ad' => $avgGrossPerAd,
                     'user_payout_cost' => $profit['user_payout_cost'],
                     'referral_cost' => $profit['referral_cost'],
                     'net_profit' => $profit['net_profit'],
+                    'avg_net_per_ad' => $avgNetPerAd,
                     'completion_rate' => $completionRate,
                     'risk_score_avg' => min(100, $riskAvg),
                     'vpn_events' => $vpnEvents,
